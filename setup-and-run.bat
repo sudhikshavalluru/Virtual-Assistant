@@ -1,0 +1,9 @@
+@echo off
+cd /d "c:\AutomateX"
+echo Installing dependencies...
+npm install
+echo Starting server...
+start npm start
+echo Opening dashboard...
+start aiva-dashboard-new.html
+pause

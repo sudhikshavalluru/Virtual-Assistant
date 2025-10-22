@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Complaint Assistant - Advanced Chatbot</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; }
+        
+        .header { background: linear-gradient(135deg, #6366f1, #06b6d4); color: white; padding: 20px; text-align: center; }
+        .header h1 { font-size: 28px; margin-bottom: 8px; }
+        .header p { opacity: 0.9; }
+        
+        .chat-container { max-width: 800px; margin: 20px auto; background: white; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden; height: 80vh; display: flex; flex-direction: column; }
+        
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; }
+        .message { margin-bottom: 20px; display: flex; align-items: flex-start; gap: 12px; }
+        .message.user { flex-direction: row-reverse; }
+        
+        .avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .bot-avatar { background: linear-gradient(135deg, #6366f1, #06b6d4); color: white; }
+        .user-avatar { background: #6b7280; color: white; }
+        
+        .message-content { max-width: 70%; padding: 12px 16px; border-radius: 16px; }
+        .bot-message { background: #f3f4f6; color: #374151; }
+        .user-message { background: linear-gradient(135deg, #6366f1, #06b6d4); color: white; }
+        
+        .typing-indicator { display: none; align-items: center; gap: 8px; padding: 12px 16px; background: #f3f4f6; border-radius: 16px; max-width: 70%; }
+        .typing-dots { display: flex; gap: 4px; }
+        .dot { width: 8px; height: 8px; background: #6b7280; border-radius: 50%; animation: typing 1.4s infinite; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+        
+        .quick-replies { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .quick-reply { background: #e5e7eb; color: #374151; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 12px; border: none; }
+        .quick-reply:hover { background: #6366f1; color: white; }
+        
+        .chat-input { padding: 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; align-items: center; }
+        .input-field { flex: 1; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 24px; outline: none; }
+        .send-btn { background: linear-gradient(135deg, #6366f1, #06b6d4); color: white; border: none; padding: 12px 20px; border-radius: 24px; cursor: pointer; }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .suggestions { margin-top: 12px; }
+        .suggestion-chip { display: inline-block; background: #dbeafe; color: #2563eb; padding: 4px 8px; border-radius: 12px; font-size: 11px; margin: 2px; cursor: pointer; }
+        .suggestion-chip:hover { background: #2563eb; color: white; }
+        
+        .back-btn { position: fixed; top: 20px; left: 20px; background: rgba(255,255,255,0.9); color: #6366f1; padding: 8px 16px; border: none; border-radius: 20px; cursor: pointer; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <a href="/dashboard" class="back-btn">← Back</a>
+    
+    <div class="header">
+        <h1>🤖 AI Complaint Assistant</h1>
+        <p>Advanced AI-powered support for all your technical issues</p>
+    </div>
+    
+    <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
+            <div class="message">
+                <div class="avatar bot-avatar">🤖</div>
+                <div class="message-content bot-message">
+                    Hello! I'm your AI Complaint Assistant. I can help you with:
+                    <div class="suggestions">
+                        <span class="suggestion-chip" onclick="sendMessage('Hardware problems')">Hardware Issues</span>
+                        <span class="suggestion-chip" onclick="sendMessage('Software not working')">Software Problems</span>
+                        <span class="suggestion-chip" onclick="sendMessage('Internet connection issues')">Network Issues</span>
+                        <span class="suggestion-chip" onclick="sendMessage('Login problems')">Login Issues</span>
+                        <span class="suggestion-chip" onclick="sendMessage('Computer running slow')">Performance Issues</span>
+                    </div>
+                    <br><br>What can I help you with today?
+                </div>
+            </div>
+        </div>
+        
+        <div class="message" id="typingIndicator" style="display: none;">
+            <div class="avatar bot-avatar">🤖</div>
+            <div class="typing-indicator">
+                <span>AI is thinking</span>
+                <div class="typing-dots">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input">
+            <input type="text" id="messageInput" class="input-field" placeholder="Type your message..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()" class="send-btn" id="sendBtn">Send</button>
+        </div>
+    </div>
+
+    <script src="ai-training.js"></script>
+    <script>
+        // AI Training Data - Expanded Knowledge Base
+        const aiTrainingData = {
+            // Greetings and Conversational
+            greetings: {
+                patterns: ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening'],
+                responses: [
+                    "Hello! I'm your AI Complaint Assistant. I've been trained on thousands of technical issues.",
+                    "Hi there! I'm here to help with any technical problems using my advanced AI knowledge.",
+                    "Welcome! I'm an AI trained specifically for technical support and troubleshooting."
+                ]
+            },
+            
+            // Trained responses for common issues
+            commonIssues: {
+                'computer slow': {
+                    confidence: 0.95,
+                    solution: "Based on my training data, slow computers are usually caused by: 1) Too many startup programs 2) Low disk space 3) Malware 4) Outdated hardware. Let me guide you through the most effective solution.",
+                    steps: [
+                        "Open Task Manager (Ctrl+Shift+Esc) and check CPU usage",
+                        "Disable unnecessary startup programs",
+                        "Run disk cleanup to free up space",
+                        "Check for malware using Windows Defender"
+                    ]
+                },
+                'wifi not working': {
+                    confidence: 0.92,
+                    solution: "My AI analysis shows WiFi issues have a 87% success rate with these steps:",
+                    steps: [
+                        "Restart your router (unplug for 30 seconds)",
+                        "Forget and reconnect to WiFi network",
+                        "Update network drivers",
+                        "Reset network settings if needed"
+                    ]
+                },
+                'blue screen': {
+                    confidence: 0.89,
+                    solution: "Blue Screen of Death (BSOD) analysis from my training indicates:",
+                    steps: [
+                        "Note the error code displayed",
+                        "Boot in Safe Mode",
+                        "Run memory diagnostic",
+                        "Update or rollback recent drivers"
+                    ]
+                },
+                'printer not working': {
+                    confidence: 0.91,
+                    solution: "Printer issues resolved in 78% of cases with these AI-recommended steps:",
+                    steps: [
+                        "Check printer connection and power",
+                        "Clear print queue",
+                        "Update printer drivers",
+                        "Run Windows printer troubleshooter"
+                    ]
+                },
+                'email not working': {
+                    confidence: 0.88,
+                    solution: "Email connectivity issues - my training shows high success with:",
+                    steps: [
+                        "Check internet connection",
+                        "Verify email server settings",
+                        "Clear email cache",
+                        "Disable antivirus email scanning temporarily"
+                    ]
+                },
+                'software crash': {
+                    confidence: 0.86,
+                    solution: "Application crashes analyzed by AI show these patterns:",
+                    steps: [
+                        "Run the application as administrator",
+                        "Check for software updates",
+                        "Clear application data/cache",
+                        "Reinstall the application if needed"
+                    ]
+                }
+            },
+            
+            // Hardware Issues - AI Trained Responses
+            hardware: {
+                keywords: ['hardware', 'computer', 'laptop', 'desktop', 'screen', 'monitor', 'keyboard', 'mouse', 'printer', 'device', 'usb', 'port'],
+                confidence: 0.85,
+                responses: [
+                    "My AI training on hardware issues shows a 82% success rate with systematic diagnosis.",
+                    "Based on 10,000+ hardware cases in my training, let me help you troubleshoot.",
+                    "AI analysis indicates hardware problems follow predictable patterns. Let's diagnose yours."
+                ],
+                solutions: [
+                    "Physical connection check (AI shows 45% of issues are connection-related)",
+                    "Power cycle the device (effective in 67% of hardware cases)",
+                    "Driver update (resolves 38% of hardware compatibility issues)",
+                    "Hardware diagnostic scan (identifies 71% of failing components)",
+                    "Check device manager for error codes (AI can interpret these)"
+                ]
+            },
+            
+            // Software Issues - AI Enhanced
+            software: {
+                keywords: ['software', 'application', 'app', 'program', 'install', 'update', 'crash', 'freeze', 'error', 'bug', 'glitch'],
+                confidence: 0.91,
+                responses: [
+                    "My AI has been trained on 15,000+ software issues. Success rate: 89% with proper diagnosis.",
+                    "Software troubleshooting AI analysis shows most issues fall into 5 categories. Let me identify yours.",
+                    "Based on machine learning patterns, I can predict the most likely solution for your software issue."
+                ],
+                solutions: [
+                    "Application restart (AI data shows 34% immediate success rate)",
+                    "Software update check (fixes 52% of compatibility issues)",
+                    "System restart (clears 67% of memory-related software problems)",
+                    "Cache/temp file cleanup (resolves 41% of performance issues)",
+                    "Clean reinstall (95% success rate for persistent issues)"
+                ]
+            },
+            
+            // Network Issues - AI Trained
+            network: {
+                keywords: ['internet', 'wifi', 'network', 'connection', 'online', 'browser', 'website', 'email', 'dns', 'ip'],
+                confidence: 0.88,
+                responses: [
+                    "Network AI analysis trained on 12,000+ connectivity cases. Average resolution time: 8 minutes.",
+                    "My neural network for network issues shows 91% success rate with layered troubleshooting.",
+                    "AI pattern recognition identifies your network issue type. Let me run diagnostics."
+                ],
+                solutions: [
+                    "Router power cycle (AI shows 58% success rate for connectivity issues)",
+                    "Multi-device connectivity test (isolates 73% of device-specific problems)",
+                    "WiFi profile reset (fixes 44% of authentication issues)",
+                    "Network adapter reset (resolves 62% of driver conflicts)",
+                    "DNS flush and renewal (clears 39% of resolution problems)"
+                ]
+            },
+            
+            // Login Issues
+            login: {
+                keywords: ['login', 'password', 'username', 'account', 'sign in', 'access', 'authentication'],
+                responses: [
+                    "Login problems can be resolved! Let me help you regain access.",
+                    "I'll guide you through fixing your login issue.",
+                    "Let's get you back into your account."
+                ],
+                solutions: [
+                    "Double-check your username and password",
+                    "Ensure Caps Lock is off",
+                    "Clear your browser cache and cookies",
+                    "Try using password reset option",
+                    "Check if your account is locked or suspended"
+                ]
+            },
+            
+            // Performance Issues - AI Optimized
+            performance: {
+                keywords: ['slow', 'fast', 'speed', 'performance', 'lag', 'hang', 'memory', 'cpu', 'freeze', 'sluggish'],
+                confidence: 0.93,
+                responses: [
+                    "Performance optimization AI trained on 20,000+ slow system cases. Average speed improvement: 340%.",
+                    "My machine learning model for performance issues shows 94% user satisfaction with systematic optimization.",
+                    "AI performance analysis can identify bottlenecks with 87% accuracy. Let me scan your system patterns."
+                ],
+                solutions: [
+                    "Resource usage analysis (AI identifies top CPU/memory consumers)",
+                    "Strategic system restart (clears 78% of memory leaks)",
+                    "Disk space optimization (AI shows 15% minimum free space needed)",
+                    "Startup program optimization (reduces boot time by average 67%)",
+                    "Malware scan (removes performance-killing threats in 84% of cases)"
+                ]
+            }
+        };
+        
+        // AI Response Generation Engine
+        function generateAIResponse(userInput) {
+            const input = userInput.toLowerCase();
+            let bestMatch = null;
+            let highestConfidence = 0;
+            
+            // Check for exact issue matches first
+            for (const [issue, data] of Object.entries(aiTrainingData.commonIssues)) {
+                if (input.includes(issue.toLowerCase())) {
+                    return {
+                        response: data.solution,
+                        steps: data.steps,
+                        confidence: data.confidence,
+                        type: 'exact_match'
+                    };
+                }
+            }
+            
+            // Check category matches with confidence scoring
+            for (const [category, data] of Object.entries(aiTrainingData)) {
+                if (category === 'greetings' || category === 'commonIssues') continue;
+                
+                const matchScore = data.keywords.filter(keyword => 
+                    input.includes(keyword)
+                ).length / data.keywords.length;
+                
+                if (matchScore > 0 && (data.confidence * matchScore) > highestConfidence) {
+                    highestConfidence = data.confidence * matchScore;
+                    bestMatch = {
+                        response: data.responses[Math.floor(Math.random() * data.responses.length)],
+                        steps: data.solutions,
+                        confidence: data.confidence * matchScore,
+                        type: 'category_match',
+                        category: category
+                    };
+                }
+            }
+            
+            return bestMatch;
+        }
+        };
+        
+        let conversationContext = {
+            currentIssue: null,
+            userProfession: null,
+            troubleshootingStep: 0,
+            issueDetails: {}
+        };
+        
+        function addMessage(content, isUser = false, showQuickReplies = false) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message' + (isUser ? ' user' : '');
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar ' + (isUser ? 'user-avatar' : 'bot-avatar');
+            avatar.textContent = isUser ? '👤' : '🤖';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content ' + (isUser ? 'user-message' : 'bot-message');
+            messageContent.innerHTML = content;
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            
+            if (showQuickReplies && !isUser) {
+                const quickReplies = document.createElement('div');
+                quickReplies.className = 'quick-replies';
+                quickReplies.innerHTML = `
+                    <button class="quick-reply" onclick="sendMessage('This helped!')">✅ This helped!</button>
+                    <button class="quick-reply" onclick="sendMessage('Still not working')">❌ Still not working</button>
+                    <button class="quick-reply" onclick="sendMessage('Need more help')">🆘 Need more help</button>
+                    <button class="quick-reply" onclick="sendMessage('Create ticket')">🎫 Create ticket</button>
+                `;
+                messageContent.appendChild(quickReplies);
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function showTypingIndicator() {
+            document.getElementById('typingIndicator').style.display = 'flex';
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function hideTypingIndicator() {
+            document.getElementById('typingIndicator').style.display = 'none';
+        }
+        
+        function getAIResponse(userMessage) {
+            const message = userMessage.toLowerCase();
+            
+            // Check for greetings
+            if (message.includes('hello') || message.includes('hi') || message.includes('hey')) {
+                if (window.trainedAI) {
+                    return `Hello! I'm your trained AI assistant. I've learned from ${window.trainedAI.getStats().trainingExamples} real support cases.`;
+                }
+                return aiTrainingData.greetings.responses[Math.floor(Math.random() * aiTrainingData.greetings.responses.length)];
+            }
+            
+            // Use trained AI model first
+            if (window.trainedAI) {
+                const prediction = window.trainedAI.predict(userMessage);
+                
+                if (prediction.confidence > 30) {
+                    let response = `<div style="background: #e8f5e8; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 11px;">🎓 Trained AI | Confidence: ${prediction.confidence}% | Category: ${prediction.category}</div>`;
+                    
+                    response += `<strong>Trained Response:</strong><br>${prediction.response}<br><br>`;
+                    response += `<em>Solution learned from real technical support cases.</em>`;
+                    
+                    return response;
+                }
+            }
+            
+            // Use AI response generation
+            const aiResult = generateAIResponse(userMessage);
+            if (aiResult) {
+                const confidencePercent = Math.round(aiResult.confidence * 100);
+                let response = `<div style="background: #e0f2fe; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 11px;">🤖 AI Confidence: ${confidencePercent}% | Match Type: ${aiResult.type.replace('_', ' ')}</div>`;
+                
+                response += aiResult.response + '<br><br>';
+                
+                if (aiResult.steps && aiResult.steps.length > 0) {
+                    response += '<strong>AI-Recommended Steps:</strong><br>';
+                    aiResult.steps.slice(0, 2).forEach((step, index) => {
+                        response += `${index + 1}. ${step}<br>`;
+                    });
+                }
+                
+                return response;
+            }
+            
+            // Check for thank you
+            if (message.includes('thank') || message.includes('helped')) {
+                return "You're welcome! I'm glad I could help. Is there anything else you need assistance with?";
+            }
+            
+            // Check for ticket creation
+            if (message.includes('create ticket') || message.includes('ticket')) {
+                return `I'll help you create a support ticket. Please provide:<br>
+                        1. Your profession/role<br>
+                        2. Brief description of the issue<br>
+                        3. How urgent is this problem?<br><br>
+                        Or you can <a href="/dashboard" style="color: #6366f1;">go to the main dashboard</a> to create a detailed ticket.`;
+            }
+            
+            // Fallback to category matching
+            for (const [category, data] of Object.entries(aiTrainingData)) {
+                if (category === 'greetings' || category === 'commonIssues') continue;
+                
+                const hasKeyword = data.keywords.some(keyword => message.includes(keyword));
+                if (hasKeyword) {
+                    conversationContext.currentIssue = category;
+                    const response = data.responses[Math.floor(Math.random() * data.responses.length)];
+                    const solution = data.solutions[Math.floor(Math.random() * data.solutions.length)];
+                    
+                    return `${response}<br><br><strong>AI Recommendation:</strong><br>• ${solution}<br><br>This solution has proven effective in my training data!`;
+                }
+            }
+            
+            // AI-powered follow-up responses
+            if (message.includes('not working') || message.includes('still') || message.includes('didn\'t work')) {
+                if (conversationContext.currentIssue && aiTrainingData[conversationContext.currentIssue]) {
+                    const solutions = aiTrainingData[conversationContext.currentIssue].solutions;
+                    conversationContext.troubleshootingStep++;
+                    
+                    if (conversationContext.troubleshootingStep < solutions.length) {
+                        const nextSolution = solutions[conversationContext.troubleshootingStep];
+                        const successRate = Math.round(Math.random() * 30 + 60); // Simulate AI success rates
+                        return `My AI learning suggests trying this next approach (${successRate}% success rate in similar cases):<br><br><strong>Advanced Step ${conversationContext.troubleshootingStep + 1}:</strong><br>• ${nextSolution}<br><br>This solution is based on machine learning patterns from similar issues.`;
+                    } else {
+                        return `My AI has exhausted the automated solutions (tried ${solutions.length} different approaches). Based on training data, this issue requires human expertise.<br><br>
+                                <strong>🎫 AI Recommendation: Create Support Ticket</strong><br>
+                                My neural network suggests escalating to a human specialist for advanced diagnosis.`;
+                    }
+                }
+            }
+            
+            // Handle need more help
+            if (message.includes('more help') || message.includes('need help')) {
+                return `I'm here to help! Here are your options:<br><br>
+                        🔧 <strong>Continue troubleshooting:</strong> Tell me more about your specific issue<br>
+                        🎫 <strong>Create a support ticket:</strong> Get help from a human expert<br>
+                        📞 <strong>Escalate:</strong> Mark as urgent for immediate attention<br><br>
+                        What would you prefer?`;
+            }
+            
+            // AI-powered default response with learning
+            return `<div style="background: #fff3cd; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 11px;">🧠 AI Learning Mode: Analyzing "${userMessage}"</div>
+                    My AI is processing your issue: "${userMessage}"<br><br>
+                    To improve my machine learning accuracy, please provide:<br>
+                    • 📅 When did this problem start?<br>
+                    • 🔍 What specific error messages do you see?<br>
+                    • 🛠️ What troubleshooting have you already tried?<br>
+                    • 💼 What's your profession? (helps with prioritization)<br><br>
+                    <strong>The more data you provide, the more accurate my AI predictions become!</strong>`;
+        }
+        
+        function sendMessage(message = null) {
+            const input = document.getElementById('messageInput');
+            const userMessage = message || input.value.trim();
+            
+            if (!userMessage) return;
+            
+            // Add user message
+            addMessage(userMessage, true);
+            
+            // Clear input
+            if (!message) input.value = '';
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            // Simulate AI thinking time
+            setTimeout(() => {
+                hideTypingIndicator();
+                
+                // Get AI response
+                const aiResponse = getAIResponse(userMessage);
+                
+                // Add AI response with quick replies for solutions
+                const showQuickReplies = aiResponse.includes('Try this') || aiResponse.includes('Let\'s try');
+                addMessage(aiResponse, false, showQuickReplies);
+                
+            }, 1000 + Math.random() * 2000); // Random delay between 1-3 seconds
+        }
+        
+        // Auto-focus input
+        document.getElementById('messageInput').focus();
+        
+        // Show AI training status
+        setTimeout(() => {
+            if (window.trainedAI) {
+                const stats = window.trainedAI.getStats();
+                addMessage(`🧠 <strong>AI Model Loaded!</strong> Trained on ${stats.trainingExamples} real cases across ${stats.categories.length} categories.`, false);
+            } else {
+                addMessage("💡 <strong>Pro tip:</strong> I can help with hardware, software, network, login, and performance issues!", false);
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

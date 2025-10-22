@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AIVA Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8f9fa; transition: all 0.3s; }
+        body.dark { background: #1f2937; color: #f9fafb; }
+        body.dark .header { background: #374151; }
+        body.dark .header h1, body.dark .header .user, body.dark .header .nav span { color: #f9fafb; }
+        body.dark .chat-section, body.dark .quick-actions, body.dark .tickets-section, body.dark .help-section { background: #374151; }
+        body.dark .message-content { background: #4b5563; color: #f9fafb; }
+        body.dark .chat-input input { background: #4b5563; border-color: #6b7280; color: #f9fafb; }
+        body.dark .tickets-panel, body.dark .analytics-panel { background: #374151; }
+        body.dark h2, body.dark h3, body.dark .ticket-id, body.dark .stat-label { color: #f9fafb; }
+        body.dark .category-btn { background: #4b5563; color: #f9fafb; }
+        body.dark .suggestion { background: #4b5563; color: #f9fafb; }
+        body.dark .ticket-item { background: #4b5563; }
+        body.dark .stat-card { background: #4b5563; }
+        
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 16px; width: 500px; max-width: 90%; }
+        .modal h3 { margin-bottom: 20px; color: #374151; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #374151; font-weight: 500; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+        .form-group textarea { height: 80px; resize: vertical; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        .modal-btn.primary { background: #6366f1; color: white; }
+        .modal-btn.secondary { background: #f3f4f6; color: #374151; }
+        body.dark .modal-content { background: #374151; }
+        body.dark .modal h3, body.dark .form-group label { color: #f9fafb; }
+        body.dark .form-group input, body.dark .form-group select, body.dark .form-group textarea { background: #4b5563; border-color: #6b7280; color: #f9fafb; }
+        
+        .header { background: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .header h1 { color: #6366f1; font-size: 24px; font-weight: 600; }
+        .header .user { color: #6b7280; font-size: 14px; }
+        .header .nav { display: flex; gap: 30px; align-items: center; }
+        .header .nav span { color: #374151; cursor: pointer; font-size: 14px; }
+        
+        .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
+        
+        .chat-section { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .chat-header { background: linear-gradient(135deg, #6366f1, #06b6d4); color: white; padding: 30px; }
+        .chat-header h2 { font-size: 20px; margin-bottom: 5px; }
+        .chat-header p { opacity: 0.9; font-size: 14px; }
+        
+        .chat-messages { height: 400px; padding: 20px; overflow-y: auto; }
+        .message { margin-bottom: 20px; }
+        .message.bot { display: flex; align-items: flex-start; gap: 10px; }
+        .message.user { text-align: right; }
+        .bot-avatar { width: 32px; height: 32px; background: #6366f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; }
+        .message-content { background: #f3f4f6; padding: 12px 16px; border-radius: 12px; max-width: 80%; }
+        .message.user .message-content { background: #6366f1; color: white; margin-left: auto; width: fit-content; max-width: 60%; }
+        .timestamp { font-size: 11px; color: #9ca3af; margin-top: 5px; }
+        
+        .chat-input { padding: 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; }
+        .chat-input input { flex: 1; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 24px; outline: none; }
+        .chat-input button { background: #6366f1; color: white; border: none; padding: 12px 20px; border-radius: 24px; cursor: pointer; }
+        
+        .sidebar { display: flex; flex-direction: column; gap: 20px; }
+        .quick-actions { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .quick-actions h3 { margin-bottom: 15px; color: #374151; }
+        .action-btn { background: linear-gradient(135deg, #6366f1, #06b6d4); color: white; border: none; padding: 12px 20px; border-radius: 8px; width: 100%; margin-bottom: 10px; cursor: pointer; font-size: 14px; }
+        .admin-btn { background: #f3f4f6; color: #374151; }
+        
+        .tickets-section { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .tickets-section h3 { margin-bottom: 15px; color: #374151; }
+        .ticket-item { background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid #6366f1; }
+        .ticket-id { font-weight: 600; color: #374151; font-size: 12px; }
+        .ticket-issue { color: #6b7280; font-size: 11px; margin-top: 2px; }
+        .ticket-priority { font-size: 10px; color: #059669; background: #d1fae5; padding: 2px 6px; border-radius: 10px; display: inline-block; margin-top: 4px; }
+        
+        .help-section { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .help-section h3 { margin-bottom: 10px; color: #374151; }
+        .help-section p { color: #6b7280; font-size: 14px; margin-bottom: 15px; }
+        .feature { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; color: #6b7280; }
+        .feature::before { content: "⚡"; }
+        
+        .suggestions { margin-top: 10px; }
+        .suggestion { background: #e5e7eb; color: #374151; padding: 6px 12px; margin: 3px; border-radius: 15px; cursor: pointer; display: inline-block; font-size: 12px; }
+        .suggestion:hover { background: #6366f1; color: white; }
+        
+        .categories { padding: 15px 20px; border-top: 1px solid #e5e7eb; }
+        .category-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+        .category-btn { background: #f3f4f6; color: #374151; border: none; padding: 8px 12px; border-radius: 20px; cursor: pointer; font-size: 12px; }
+        .category-btn:hover { background: #6366f1; color: white; }
+        
+        .tickets-panel { position: fixed; top: 0; right: -400px; width: 400px; height: 100vh; background: white; box-shadow: -2px 0 10px rgba(0,0,0,0.1); transition: right 0.3s; z-index: 1000; padding: 20px; overflow-y: auto; }
+        .tickets-panel.open { right: 0; }
+        .tickets-panel h2 { margin-bottom: 20px; color: #374151; }
+        .close-panel { float: right; cursor: pointer; font-size: 20px; color: #6b7280; }
+        
+        .analytics-panel { position: fixed; top: 0; right: -400px; width: 400px; height: 100vh; background: white; box-shadow: -2px 0 10px rgba(0,0,0,0.1); transition: right 0.3s; z-index: 1000; padding: 20px; overflow-y: auto; }
+        .analytics-panel.open { right: 0; }
+        .stat-card { background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .stat-number { font-size: 24px; font-weight: bold; color: #6366f1; }
+        .stat-label { color: #6b7280; font-size: 14px; }
+        
+        .timeline-tabs { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 1px solid #e5e7eb; }
+        .timeline-tab { background: none; border: none; padding: 10px 15px; cursor: pointer; font-size: 13px; color: #6b7280; border-bottom: 2px solid transparent; }
+        .timeline-tab.active { color: #6366f1; border-bottom-color: #6366f1; font-weight: 500; }
+        .timeline-tab:hover { color: #6366f1; }
+        body.dark .timeline-tabs { border-bottom-color: #4b5563; }
+        body.dark .timeline-tab { color: #9ca3af; }
+        body.dark .timeline-tab.active { color: #6366f1; }
+        
+        .timeline-section { margin-bottom: 25px; }
+        .timeline-header { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #e5e7eb; }
+        body.dark .timeline-header { color: #f9fafb; border-bottom-color: #4b5563; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>AIVA Dashboard</h1>
+            <div class="user">Welcome back, sudhiksha.valluru@gmail.com</div>
+        </div>
+        <div class="nav">
+            <span onclick="toggleTheme()" style="cursor: pointer;" id="themeToggle">🌙</span>
+            <span onclick="toggleTicketsPanel()" style="cursor: pointer;">📋 My Tickets</span>
+            <span onclick="toggleAnalyticsPanel()" style="cursor: pointer;">📊 Analytics</span>
+            <span onclick="logout()" style="cursor: pointer;">🚪 Logout</span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="chat-section">
+            <div class="chat-header">
+                <h2>💬 AIVA Chat</h2>
+                <p>AI-Powered Support Assistant</p>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot">
+                    <div class="bot-avatar">🤖</div>
+                    <div>
+                        <div class="message-content">
+                            Hey there! 👋 I'm AIVA, your AI assistant. Tell me what's troubling you and I'll do my best to help!
+                        </div>
+                        <div class="suggestions">
+                            <span class="suggestion" onclick="sendPredefined('Computer slow')">Computer slow</span>
+                            <span class="suggestion" onclick="sendPredefined('WiFi issues')">WiFi issues</span>
+                            <span class="suggestion" onclick="sendPredefined('Login problems')">Login problems</span>
+                        </div>
+                        <div class="timestamp">06:05 pm</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="categories">
+                <div class="category-buttons">
+                    <button class="category-btn" onclick="selectCategory('Hardware')">Hardware Issues</button>
+                    <button class="category-btn" onclick="selectCategory('Software')">Software Problems</button>
+                    <button class="category-btn" onclick="selectCategory('Network')">Network & Internet</button>
+                    <button class="category-btn" onclick="selectCategory('Login')">Login & Access</button>
+                    <button class="category-btn" onclick="selectCategory('Performance')">Performance Issues</button>
+                    <button class="category-btn" onclick="selectCategory('Other')">Other</button>
+                </div>
+            </div>
+            
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Type your issue here..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="quick-actions">
+                <h3>⚙️ Quick Actions</h3>
+                <button class="action-btn" onclick="createQuickTicket()">➕ Create Ticket</button>
+            </div>
+            
+            <div class="tickets-section">
+                <h3>📋 My Tickets</h3>
+                <div id="ticketsList">
+                    <p style="color: #6b7280; font-size: 14px;">No tickets yet</p>
+                </div>
+            </div>
+            
+            <div class="help-section">
+                <h3>Need Help?</h3>
+                <p>AIVA is here 24/7 to assist you with any technical issues. Just start chatting!</p>
+                <div class="feature">AI-powered troubleshooting</div>
+                <div class="feature">Automatic ticket creation</div>
+                <div class="feature">Real-time support</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="ticketsPanel" class="tickets-panel">
+        <span class="close-panel" onclick="toggleTicketsPanel()">&times;</span>
+        <h2>📋 My Tickets</h2>
+        
+        <div class="timeline-tabs">
+            <button class="timeline-tab active" onclick="filterByTimeline('all')">All</button>
+            <button class="timeline-tab" onclick="filterByTimeline('24h')">24 Hours</button>
+            <button class="timeline-tab" onclick="filterByTimeline('10h')">10 Hours</button>
+            <button class="timeline-tab" onclick="filterByTimeline('2d')">2 Days</button>
+        </div>
+        
+        <div id="panelTicketsList">
+            <p style="color: #6b7280;">No tickets yet</p>
+        </div>
+    </div>
+    
+    <div id="analyticsPanel" class="analytics-panel">
+        <span class="close-panel" onclick="toggleAnalyticsPanel()">&times;</span>
+        <h2>📊 Analytics</h2>
+        <div class="stat-card">
+            <div class="stat-number" id="totalTickets">0</div>
+            <div class="stat-label">Total Tickets</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="resolvedIssues">0</div>
+            <div class="stat-label">Issues Resolved</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="avgResponseTime">< 1 min</div>
+            <div class="stat-label">Avg Response Time</div>
+        </div>
+    </div>
+    
+    <div id="ticketModal" class="modal">
+        <div class="modal-content">
+            <h3>🎫 Create Support Ticket</h3>
+            <form onsubmit="submitTicket(event)">
+                <div class="form-group">
+                    <label for="ticketTitle">Issue Title</label>
+                    <input type="text" id="ticketTitle" required placeholder="Brief description of the issue">
+                </div>
+                
+                <div class="form-group">
+                    <label for="ticketCategory">Category</label>
+                    <select id="ticketCategory" required>
+                        <option value="">Select Category</option>
+                        <option value="Hardware">Hardware Issues</option>
+                        <option value="Software">Software Problems</option>
+                        <option value="Network">Network & Internet</option>
+                        <option value="Login">Login & Access</option>
+                        <option value="Performance">Performance Issues</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ticketPriority">Priority</label>
+                    <select id="ticketPriority" required>
+                        <option value="Low">Low</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="High">High</option>
+                        <option value="Critical">Critical</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ticketDescription">Detailed Description</label>
+                    <textarea id="ticketDescription" required placeholder="Please describe the issue in detail, including steps to reproduce if applicable"></textarea>
+                </div>
+                
+                <div class="modal-buttons">
+                    <button type="button" class="modal-btn secondary" onclick="closeTicketModal()">Cancel</button>
+                    <button type="submit" class="modal-btn primary">Create Ticket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let attempts = 0;
+        let currentIssue = '';
+        let selectedCategory = '';
+        let tickets = [];
+        
+        function addMessage(text, isUser) {
+            const chat = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = 'message ' + (isUser ? 'user' : 'bot');
+            
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            if (isUser) {
+                div.innerHTML = `<div class="message-content">${text}</div><div class="timestamp">${time}</div>`;
+            } else {
+                div.innerHTML = `
+                    <div class="bot-avatar">🤖</div>
+                    <div>
+                        <div class="message-content">${text}</div>
+                        <div class="timestamp">${time}</div>
+                    </div>
+                `;
+            }
+            
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+        
+        function addMessageWithButtons(text, buttons) {
+            const chat = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = 'message bot';
+            
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            const buttonHtml = buttons.map(btn => 
+                `<span class="suggestion" onclick="sendPredefined('${btn}')">${btn}</span>`
+            ).join('');
+            
+            div.innerHTML = `
+                <div class="bot-avatar">🤖</div>
+                <div>
+                    <div class="message-content">${text}</div>
+                    <div class="suggestions">${buttonHtml}</div>
+                    <div class="timestamp">${time}</div>
+                </div>
+            `;
+            
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+        
+        function getResponse(input) {
+            const text = input.toLowerCase();
+            
+            if (text.includes('not working') || text.includes('still not working')) {
+                attempts++;
+                
+                if (attempts === 1) {
+                    addMessageWithButtons('Solution 1: Try restarting your device and clearing temporary files.', 
+                        ['This solved it!', 'Still not working', 'Need more help']);
+                    return;
+                }
+                
+                if (attempts === 2) {
+                    addMessageWithButtons('Solution 2: Update your drivers and run system diagnostics.', 
+                        ['This solved it!', 'Still not working', 'Create ticket now']);
+                    return;
+                }
+                
+                if (attempts >= 3) {
+                    const ticketId = 'AIVA-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+                    const issue = currentIssue || 'General support request';
+                    
+                    // Auto-generate ticket
+                    const ticket = {
+                        id: ticketId,
+                        issue: issue.substring(0, 30) + (issue.length > 30 ? '...' : ''),
+                        priority: 'High',
+                        timestamp: new Date().toISOString()
+                    };
+                    tickets.push(ticket);
+                    updateTicketsList();
+                    
+                    addMessage(`I've tried multiple solutions without success. I've automatically created a support ticket: ${ticketId}. A technician will contact you within 1 hour for high priority issues.`);
+                    attempts = 0;
+                    return;
+                }
+            }
+            
+            if (text.includes('create ticket') || text.includes('yes')) {
+                const ticketId = 'AIVA-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+                const issue = currentIssue || 'General support request';
+                
+                // Add ticket to sidebar
+                const ticket = {
+                    id: ticketId,
+                    issue: issue.substring(0, 30) + (issue.length > 30 ? '...' : ''),
+                    priority: 'Medium',
+                    timestamp: new Date().toISOString()
+                };
+                tickets.push(ticket);
+                updateTicketsList();
+                
+                addMessage(`🎫 Support ticket created: ${ticketId}. A technician will contact you within 2 hours.`);
+                attempts = 0;
+                return;
+            }
+            
+            if (text.includes('solved') || text.includes('worked')) {
+                addMessage('Great! I\'m glad the issue is resolved. Anything else I can help with?');
+                attempts = 0;
+                return;
+            }
+            
+            attempts = 0;
+            currentIssue = input;
+            
+            // Category-specific responses
+            if (selectedCategory === 'Hardware') {
+                if (text.includes('not working') || text.includes('broken')) {
+                    addMessageWithButtons('For hardware issues: Check all cable connections, restart the device, and ensure power supply is working.', 
+                        ['This solved it!', 'Still not working', 'Need more help']);
+                } else {
+                    addMessageWithButtons('Hardware troubleshooting: Check connections, power supply, and device status indicators.', 
+                        ['This solved it!', 'Still not working', 'Need more help']);
+                }
+            } else if (selectedCategory === 'Software') {
+                addMessageWithButtons('For software issues: Restart the application, check for updates, and clear cache/temporary files.', 
+                    ['This solved it!', 'Still not working', 'Need more help']);
+            } else if (selectedCategory === 'Network') {
+                addMessageWithButtons('Most connection issues are resolved with a router restart. Try this first.', 
+                    ['This solved it!', 'Still not working', 'Create ticket now', 'Need more help']);
+            } else if (selectedCategory === 'Login') {
+                addMessageWithButtons('For login issues: Check your username/password, ensure Caps Lock is off, and clear browser cache.', 
+                    ['This solved it!', 'Still not working', 'Need more help']);
+            } else if (selectedCategory === 'Performance') {
+                addMessageWithButtons('For performance issues: Close unnecessary programs, restart your computer, and check available disk space.', 
+                    ['This solved it!', 'Still not working', 'Need more help']);
+            } else {
+                // Default responses for non-category inputs
+                if (text.includes('slow') || text.includes('performance')) {
+                    addMessageWithButtons('For slow performance: Close unnecessary programs, restart your computer, and check available disk space.', 
+                        ['This solved it!', 'Still not working', 'Need more help']);
+                } else if (text.includes('wifi') || text.includes('internet') || text.includes('network')) {
+                    addMessageWithButtons('Most connection issues are resolved with a router restart. Try this first.', 
+                        ['This solved it!', 'Still not working', 'Create ticket now', 'Need more help']);
+                } else if (text.includes('login') || text.includes('password')) {
+                    addMessageWithButtons('For login issues: Check your username/password, ensure Caps Lock is off, and clear browser cache.', 
+                        ['This solved it!', 'Still not working', 'Need more help']);
+                } else if (text.includes('crash') || text.includes('freeze')) {
+                    addMessageWithButtons('For crashes: End the task in Task Manager, restart the application, and check for updates.', 
+                        ['This solved it!', 'Still not working', 'Need more help']);
+                } else {
+                    addMessage('I can help with computer issues. Please describe your specific problem (e.g., "computer is slow", "wifi not working").');
+                }
+            }
+        }
+        
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            addMessage(text, true);
+            input.value = '';
+            
+            setTimeout(() => getResponse(text), 500);
+        }
+        
+        function sendPredefined(text) {
+            addMessage(text, true);
+            setTimeout(() => getResponse(text), 500);
+        }
+        
+        function selectCategory(category) {
+            const input = document.getElementById('messageInput');
+            selectedCategory = category;
+            const placeholders = {
+                'Hardware': 'Type according to hardware issue...',
+                'Software': 'Type according to software issue...',
+                'Network': 'Type according to network issue...',
+                'Login': 'Type according to login issue...',
+                'Performance': 'Type according to performance issue...',
+                'Other': 'Type your other issue...'
+            };
+            input.placeholder = placeholders[category] || 'Type your issue here...';
+        }
+        
+        let currentTimelineFilter = 'all';
+        
+        function updateTicketsList() {
+            const ticketsList = document.getElementById('ticketsList');
+            
+            const ticketsHtml = tickets.length === 0 ? 
+                '<p style="color: #6b7280; font-size: 14px;">No tickets yet</p>' :
+                tickets.slice(0, 3).map(ticket => `
+                    <div class="ticket-item">
+                        <div class="ticket-id">${ticket.id}</div>
+                        <div class="ticket-issue">${ticket.issue}</div>
+                        <div class="ticket-priority">${ticket.priority}</div>
+                    </div>
+                `).join('');
+            
+            ticketsList.innerHTML = ticketsHtml;
+            updatePanelTicketsList();
+        }
+        
+        function updatePanelTicketsList() {
+            const panelTicketsList = document.getElementById('panelTicketsList');
+            const filteredTickets = filterTicketsByTimeline(currentTimelineFilter);
+            
+            if (filteredTickets.length === 0) {
+                panelTicketsList.innerHTML = '<p style="color: #6b7280;">No tickets in this timeframe</p>';
+                return;
+            }
+            
+            const groupedTickets = groupTicketsByTime(filteredTickets);
+            let html = '';
+            
+            Object.keys(groupedTickets).forEach(timeGroup => {
+                if (groupedTickets[timeGroup].length > 0) {
+                    html += `<div class="timeline-section">`;
+                    html += `<div class="timeline-header">${timeGroup}</div>`;
+                    html += groupedTickets[timeGroup].map(ticket => `
+                        <div class="ticket-item">
+                            <div class="ticket-id">${ticket.id}</div>
+                            <div class="ticket-issue">${ticket.issue}</div>
+                            <div class="ticket-priority">${ticket.priority}</div>
+                            <div style="font-size: 11px; color: #6b7280; margin-top: 5px;">${ticket.timestamp}</div>
+                        </div>
+                    `).join('');
+                    html += `</div>`;
+                }
+            });
+            
+            panelTicketsList.innerHTML = html;
+        }
+        
+        function toggleTicketsPanel() {
+            const panel = document.getElementById('ticketsPanel');
+            panel.classList.toggle('open');
+        }
+        
+        function toggleAnalyticsPanel() {
+            const panel = document.getElementById('analyticsPanel');
+            panel.classList.toggle('open');
+            updateAnalytics();
+        }
+        
+        function updateAnalytics() {
+            document.getElementById('totalTickets').textContent = tickets.length;
+            document.getElementById('resolvedIssues').textContent = Math.floor(tickets.length * 0.8);
+        }
+        
+        function createQuickTicket() {
+            document.getElementById('ticketModal').classList.add('show');
+        }
+        
+        function closeTicketModal() {
+            document.getElementById('ticketModal').classList.remove('show');
+        }
+        
+        async function submitTicket(event) {
+            event.preventDefault();
+            
+            const title = document.getElementById('ticketTitle').value;
+            const category = document.getElementById('ticketCategory').value;
+            const priority = document.getElementById('ticketPriority').value;
+            const description = document.getElementById('ticketDescription').value;
+            
+            const ticketId = 'AIVA-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+            const ticket = {
+                id: ticketId,
+                title: title,
+                category: category,
+                priority: priority,
+                description: description,
+                userEmail: 'sudhiksha.valluru@gmail.com'
+            };
+            
+            try {
+                // Save to MongoDB
+                const response = await fetch('/api/tickets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(ticket)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    // Add to local array for UI
+                    const displayTicket = {
+                        id: ticketId,
+                        issue: title,
+                        category: category,
+                        priority: priority,
+                        description: description,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    tickets.push(displayTicket);
+                    updateTicketsList();
+                    
+                    const responseTime = priority === 'Critical' ? '30 minutes' : priority === 'High' ? '1 hour' : '2 hours';
+                    addMessage(`🎫 Support ticket created: ${ticketId}. Category: ${category}, Priority: ${priority}. A technician will contact you within ${responseTime}.`);
+                    
+                    closeTicketModal();
+                    
+                    // Reset form
+                    document.getElementById('ticketTitle').value = '';
+                    document.getElementById('ticketCategory').value = '';
+                    document.getElementById('ticketPriority').value = 'Medium';
+                    document.getElementById('ticketDescription').value = '';
+                } else {
+                    throw new Error('Failed to create ticket');
+                }
+            } catch (error) {
+                console.error('Error creating ticket:', error);
+                addMessage('❌ Error creating ticket. Please try again.');
+            }
+        }
+        
+        function logout() {
+            window.location.href = 'login.html';
+        }
+        
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+            
+            body.classList.toggle('dark');
+            themeToggle.textContent = body.classList.contains('dark') ? '☀️' : '🌙';
+        }
+        
+        // Load existing tickets from MongoDB
+        async function loadTickets() {
+            try {
+                const response = await fetch('/api/tickets');
+                if (response.ok) {
+                    const dbTickets = await response.json();
+                    tickets = dbTickets.map(ticket => ({
+                        id: ticket.id || ticket._id,
+                        issue: ticket.title || ticket.issue,
+                        category: ticket.category,
+                        priority: ticket.priority,
+                        description: ticket.description,
+                        timestamp: new Date(ticket.createdAt || ticket.timestamp).toLocaleString()
+                    }));
+                    updateTicketsList();
+                }
+            } catch (error) {
+                console.error('Error loading tickets:', error);
+            }
+        }
+        
+        // Load tickets when page loads
+        window.addEventListener('load', loadTickets);
+        
+        function filterTicketsByTimeline(filter) {
+            const now = new Date();
+            
+            return tickets.filter(ticket => {
+                const ticketDate = new Date(ticket.timestamp);
+                const hoursDiff = (now - ticketDate) / (1000 * 60 * 60);
+                
+                switch(filter) {
+                    case '24h': return hoursDiff <= 24;
+                    case '10h': return hoursDiff <= 10;
+                    case '2d': return hoursDiff <= 48;
+                    default: return true;
+                }
+            });
+        }
+        
+        function groupTicketsByTime(tickets) {
+            const now = new Date();
+            const groups = {
+                'Last 2 Hours': [],
+                'Last 10 Hours': [],
+                'Last 24 Hours': [],
+                'Last 2 Days': [],
+                'Older': []
+            };
+            
+            tickets.forEach(ticket => {
+                const ticketDate = new Date(ticket.timestamp);
+                const hoursDiff = (now - ticketDate) / (1000 * 60 * 60);
+                
+                if (hoursDiff <= 2) {
+                    groups['Last 2 Hours'].push(ticket);
+                } else if (hoursDiff <= 10) {
+                    groups['Last 10 Hours'].push(ticket);
+                } else if (hoursDiff <= 24) {
+                    groups['Last 24 Hours'].push(ticket);
+                } else if (hoursDiff <= 48) {
+                    groups['Last 2 Days'].push(ticket);
+                } else {
+                    groups['Older'].push(ticket);
+                }
+            });
+            
+            return groups;
+        }
+        
+        function filterByTimeline(filter) {
+            currentTimelineFilter = filter;
+            
+            // Update active tab
+            document.querySelectorAll('.timeline-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            updatePanelTicketsList();
+        }
+        
+
+    </script>
+</body>
+</html>

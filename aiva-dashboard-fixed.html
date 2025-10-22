@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AIVA Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8f9fa; transition: all 0.3s; }
+        body.dark { background: #1f2937; color: #f9fafb; }
+        body.dark .header { background: #374151; }
+        body.dark .header h1, body.dark .header .user, body.dark .header .nav span { color: #f9fafb; }
+        body.dark .chat-section, body.dark .quick-actions, body.dark .tickets-section, body.dark .help-section { background: #374151; }
+        body.dark .message-content { background: #4b5563; color: #f9fafb; }
+        body.dark .chat-input input { background: #4b5563; border-color: #6b7280; color: #f9fafb; }
+        body.dark .tickets-panel, body.dark .analytics-panel { background: #374151; }
+        body.dark h2, body.dark h3, body.dark .ticket-id, body.dark .stat-label { color: #f9fafb; }
+        body.dark .category-btn { background: #4b5563; color: #f9fafb; }
+        body.dark .suggestion { background: #4b5563; color: #f9fafb; }
+        body.dark .ticket-item { background: #4b5563; }
+        body.dark .stat-card { background: #4b5563; }
+        
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 16px; width: 500px; max-width: 90%; }
+        .modal h3 { margin-bottom: 20px; color: #374151; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #374151; font-weight: 500; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+        .form-group textarea { height: 80px; resize: vertical; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        .modal-btn.primary { background: #6366f1; color: white; }
+        .modal-btn.secondary { background: #f3f4f6; color: #374151; }
+        body.dark .modal-content { background: #374151; }
+        body.dark .modal h3, body.dark .form-group label { color: #f9fafb; }
+        body.dark .form-group input, body.dark .form-group select, body.dark .form-group textarea { background: #4b5563; border-color: #6b7280; color: #f9fafb; }
+        
+        .header { background: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .header h1 { color: #6366f1; font-size: 24px; font-weight: 600; }
+        .header .user { color: #6b7280; font-size: 14px; }
+        .header .nav { display: flex; gap: 30px; align-items: center; }
+        .header .nav span { color: #374151; cursor: pointer; font-size: 14px; }
+        
+        .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
+        
+        .chat-section { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .chat-header { background: linear-gradient(135deg, #6366f1, #06b6d4); color: white; padding: 30px; }
+        .chat-header h2 { font-size: 20px; margin-bottom: 5px; }
+        .chat-header p { opacity: 0.9; font-size: 14px; }
+        
+        .chat-messages { height: 400px; padding: 20px; overflow-y: auto; }
+        .message { margin-bottom: 20px; }
+        .message.bot { display: flex; align-items: flex-start; gap: 10px; }
+        .message.user { text-align: right; }
+        .bot-avatar { width: 32px; height: 32px; background: #6366f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; }
+        .message-content { background: #f3f4f6; padding: 12px 16px; border-radius: 12px; max-width: 80%; }
+        .message.user .message-content { background: #6366f1; color: white; margin-left: auto; width: fit-content; max-width: 60%; }
+        .timestamp { font-size: 11px; color: #9ca3af; margin-top: 5px; }
+        
+        .chat-input { padding: 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; }
+        .chat-input input { flex: 1; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 24px; outline: none; }
+        .chat-input button { background: #6366f1; color: white; border: none; padding: 12px 20px; border-radius: 24px; cursor: pointer; }
+        
+        .sidebar { display: flex; flex-direction: column; gap: 20px; }
+        .quick-actions { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .quick-actions h3 { margin-bottom: 15px; color: #374151; }
+        .action-btn { background: linear-gradient(135deg, #6366f1, #06b6d4); color: white; border: none; padding: 12px 20px; border-radius: 8px; width: 100%; margin-bottom: 10px; cursor: pointer; font-size: 14px; }
+        
+        .tickets-section { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .tickets-section h3 { margin-bottom: 15px; color: #374151; }
+        .ticket-item { background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid #6366f1; }
+        .ticket-id { font-weight: 600; color: #374151; font-size: 12px; }
+        .ticket-issue { color: #6b7280; font-size: 11px; margin-top: 2px; }
+        .ticket-priority { font-size: 10px; color: #059669; background: #d1fae5; padding: 2px 6px; border-radius: 10px; display: inline-block; margin-top: 4px; }
+        
+        .help-section { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .help-section h3 { margin-bottom: 10px; color: #374151; }
+        .help-section p { color: #6b7280; font-size: 14px; margin-bottom: 15px; }
+        .feature { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; color: #6b7280; }
+        .feature::before { content: "⚡"; }
+        
+        .suggestions { margin-top: 10px; }
+        .suggestion { background: #e5e7eb; color: #374151; padding: 6px 12px; margin: 3px; border-radius: 15px; cursor: pointer; display: inline-block; font-size: 12px; }
+        .suggestion:hover { background: #6366f1; color: white; }
+        
+        .categories { padding: 15px 20px; border-top: 1px solid #e5e7eb; }
+        .category-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+        .category-btn { background: #f3f4f6; color: #374151; border: none; padding: 8px 12px; border-radius: 20px; cursor: pointer; font-size: 12px; }
+        .category-btn:hover { background: #6366f1; color: white; }
+        
+        .tickets-panel { position: fixed; top: 0; right: -400px; width: 400px; height: 100vh; background: white; box-shadow: -2px 0 10px rgba(0,0,0,0.1); transition: right 0.3s; z-index: 1000; padding: 20px; overflow-y: auto; }
+        .tickets-panel.open { right: 0; }
+        .tickets-panel h2 { margin-bottom: 20px; color: #374151; }
+        .close-panel { float: right; cursor: pointer; font-size: 20px; color: #6b7280; }
+        
+        .analytics-panel { position: fixed; top: 0; right: -400px; width: 400px; height: 100vh; background: white; box-shadow: -2px 0 10px rgba(0,0,0,0.1); transition: right 0.3s; z-index: 1000; padding: 20px; overflow-y: auto; }
+        .analytics-panel.open { right: 0; }
+        .stat-card { background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .stat-number { font-size: 24px; font-weight: bold; color: #6366f1; }
+        .stat-label { color: #6b7280; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>AIVA Dashboard</h1>
+            <div class="user" id="userEmail">Welcome back, user@example.com</div>
+        </div>
+        <div class="nav">
+            <span onclick="toggleTheme()" style="cursor: pointer;" id="themeToggle">🌙</span>
+            <span onclick="toggleTicketsPanel()" style="cursor: pointer;">📋 My Tickets</span>
+            <span onclick="window.location.href='/analytics'" style="cursor: pointer;">📊 Analytics</span>
+            <span onclick="logout()" style="cursor: pointer;">🚪 Logout</span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="chat-section">
+            <div class="chat-header">
+                <h2>💬 AIVA Chat</h2>
+                <p>AI-Powered Support Assistant</p>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot">
+                    <div class="bot-avatar">🤖</div>
+                    <div>
+                        <div class="message-content">
+                            Hey there! 👋 I'm AIVA, your AI assistant. Tell me what's troubling you and I'll do my best to help!
+                        </div>
+                        <div class="suggestions">
+                            <span class="suggestion" onclick="sendPredefined('Computer slow')">Computer slow</span>
+                            <span class="suggestion" onclick="sendPredefined('WiFi issues')">WiFi issues</span>
+                            <span class="suggestion" onclick="sendPredefined('Login problems')">Login problems</span>
+                        </div>
+                        <div class="timestamp">06:05 pm</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="categories">
+                <div style="padding: 10px 0;">
+                    <label for="categorySelect" style="color: #374151; font-weight: 500; margin-bottom: 8px; display: block;">Select Issue Category:</label>
+                    <select id="categorySelect" onchange="selectCategory(this.value)" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+                        <option value="">Choose category...</option>
+                        <option value="Hardware">Hardware Issues</option>
+                        <option value="Software">Software Problems</option>
+                        <option value="Network">Network & Internet</option>
+                        <option value="Login">Login & Access</option>
+                        <option value="Performance">Performance Issues</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Type your issue here..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="quick-actions">
+                <h3>⚙️ Quick Actions</h3>
+                <button class="action-btn" onclick="createQuickTicket()">➕ Create Ticket</button>
+            </div>
+            
+            <div class="tickets-section">
+                <h3>📋 My Tickets</h3>
+                <div id="ticketsList">
+                    <p style="color: #6b7280; font-size: 14px;">No tickets yet</p>
+                </div>
+            </div>
+            
+            <div class="help-section">
+                <h3>Need Help?</h3>
+                <p>AIVA is here 24/7 to assist you with any technical issues. Just start chatting!</p>
+                <div class="feature">AI-powered troubleshooting</div>
+                <div class="feature">Automatic ticket creation</div>
+                <div class="feature">Real-time support</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="ticketsPanel" class="tickets-panel">
+        <span class="close-panel" onclick="toggleTicketsPanel()">&times;</span>
+        <h2>📋 My Tickets</h2>
+        <div id="panelTicketsList">
+            <p style="color: #6b7280;">No tickets yet</p>
+        </div>
+    </div>
+    
+    <div id="analyticsPanel" class="analytics-panel">
+        <span class="close-panel" onclick="toggleAnalyticsPanel()">&times;</span>
+        <h2>📊 Analytics</h2>
+        <div class="stat-card">
+            <div class="stat-number" id="totalTickets">0</div>
+            <div class="stat-label">Total Tickets</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="resolvedIssues">0</div>
+            <div class="stat-label">Issues Resolved</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="avgResponseTime">< 1 min</div>
+            <div class="stat-label">Avg Response Time</div>
+        </div>
+    </div>
+    
+    <div id="ticketModal" class="modal">
+        <div class="modal-content">
+            <h3>🎫 Create Support Ticket</h3>
+            <form onsubmit="submitTicket(event)">
+                <div class="form-group">
+                    <label for="ticketTitle">Issue Title</label>
+                    <input type="text" id="ticketTitle" required placeholder="Brief description of the issue">
+                </div>
+                
+                <div class="form-group">
+                    <label for="ticketCategory">Category</label>
+                    <select id="ticketCategory" required>
+                        <option value="">Select Category</option>
+                        <option value="Hardware">Hardware Issues</option>
+                        <option value="Software">Software Problems</option>
+                        <option value="Network">Network & Internet</option>
+                        <option value="Login">Login & Access</option>
+                        <option value="Performance">Performance Issues</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ticketProfession">Your Profession/Role</label>
+                    <select id="ticketProfession" required>
+                        <option value="">Select your role</option>
+                        <option value="Doctor">Doctor</option>
+                        <option value="Engineer">Engineer</option>
+                        <option value="Teacher">Teacher</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Developer">Developer</option>
+                        <option value="Accountant">Accountant</option>
+                        <option value="Sales">Sales Representative</option>
+                        <option value="HR">HR Professional</option>
+                        <option value="Student">Student</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ticketPriority">Priority (Auto-detected)</label>
+                    <select id="ticketPriority" disabled>
+                        <option value="Low">Low</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="High">High</option>
+                        <option value="Critical">Critical</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ticketDescription">Detailed Description</label>
+                    <textarea id="ticketDescription" required placeholder="Please describe the issue in detail, including steps to reproduce if applicable" minlength="20"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ticketSteps">What troubleshooting steps have you already tried?</label>
+                    <textarea id="ticketSteps" required placeholder="List any steps you've already attempted to resolve this issue" minlength="10"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ticketImpact">How is this affecting your work?</label>
+                    <select id="ticketImpact" required>
+                        <option value="">Select impact level</option>
+                        <option value="Cannot work">Cannot work at all</option>
+                        <option value="Severely limited">Work is severely limited</option>
+                        <option value="Some difficulty">Some difficulty but can work</option>
+                        <option value="Minor inconvenience">Minor inconvenience</option>
+                    </select>
+                </div>
+                
+                <div class="modal-buttons">
+                    <button type="button" class="modal-btn secondary" onclick="closeTicketModal()">Cancel</button>
+                    <button type="submit" class="modal-btn primary">Create Ticket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let attempts = 0;
+        let currentIssue = '';
+        let selectedCategory = '';
+        let tickets = [];
+        let resolvedIssues = 0;
+        
+        function addMessage(text, isUser) {
+            const chat = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = 'message ' + (isUser ? 'user' : 'bot');
+            
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            if (isUser) {
+                div.innerHTML = `<div class="message-content">${text}</div><div class="timestamp">${time}</div>`;
+            } else {
+                div.innerHTML = `
+                    <div class="bot-avatar">🤖</div>
+                    <div>
+                        <div class="message-content">${text}</div>
+                        <div class="timestamp">${time}</div>
+                    </div>
+                `;
+            }
+            
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+        
+        function addMessageWithButtons(text, buttons) {
+            const chat = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = 'message bot';
+            
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            const buttonHtml = buttons.map(btn => 
+                `<span class="suggestion" onclick="sendPredefined('${btn}')">${btn}</span>`
+            ).join('');
+            
+            div.innerHTML = `
+                <div class="bot-avatar">🤖</div>
+                <div>
+                    <div class="message-content">${text}</div>
+                    <div class="suggestions">${buttonHtml}</div>
+                    <div class="timestamp">${time}</div>
+                </div>
+            `;
+            
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+        
+        let verificationStep = 0;
+        let userResponses = {};
+        
+        function getResponse(input) {
+            const text = input.toLowerCase();
+            
+            if (text.includes('not working') || text.includes('still not working')) {
+                attempts++;
+                
+                if (attempts === 1) {
+                    addMessageWithButtons('Solution 1: Try restarting your device and clearing temporary files.', 
+                        ['This solved it!', 'Still not working', 'Need more help']);
+                    return;
+                }
+                
+                if (attempts === 2) {
+                    addMessageWithButtons('Solution 2: Update your drivers and run system diagnostics.', 
+                        ['This solved it!', 'Still not working', 'Create ticket now']);
+                    return;
+                }
+                
+                if (attempts >= 3) {
+                    verificationStep = 1;
+                    addMessage('Before creating a ticket, I need to verify this is a genuine issue. What specific error message or symptom are you seeing?');
+                    return;
+                }
+            }
+            
+            if (verificationStep === 1) {
+                userResponses.symptom = input;
+                verificationStep = 2;
+                addMessage('When did this problem first occur? (e.g., today, yesterday, last week)');
+                return;
+            }
+            
+            if (verificationStep === 2) {
+                userResponses.timeframe = input;
+                verificationStep = 3;
+                addMessage('Have you tried any troubleshooting steps on your own? Please describe what you\'ve attempted.');
+                return;
+            }
+            
+            if (verificationStep === 3) {
+                userResponses.attempts = input;
+                verificationStep = 4;
+                addMessage('Is this issue preventing you from completing work tasks? (Yes/No)');
+                return;
+            }
+            
+            if (verificationStep === 4) {
+                userResponses.workImpact = input;
+                verificationStep = 5;
+                addMessage('What is your profession/role? (e.g., Doctor, Engineer, Teacher, Manager, Student, etc.)');
+                return;
+            }
+            
+            if (verificationStep === 5) {
+                userResponses.profession = input;
+                
+                // Validate responses
+                if (userResponses.symptom.length < 10) {
+                    addMessage('⚠️ Please provide more details about the specific problem you\'re experiencing.');
+                    verificationStep = 1;
+                    return;
+                }
+                
+                // Check if category is selected
+                if (!selectedCategory) {
+                    addMessage('⚠️ Please select a category from the dropdown above before creating a ticket.');
+                    return;
+                }
+                
+                const ticketId = 'AIVA-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+                let priority = userResponses.workImpact.toLowerCase().includes('yes') ? 'High' : 'Medium';
+                
+                // Boost priority for critical professions
+                const criticalProfessions = ['doctor', 'engineer', 'manager'];
+                if (criticalProfessions.some(prof => userResponses.profession.toLowerCase().includes(prof)) && priority === 'Medium') {
+                    priority = 'High';
+                }
+                
+                // Create ticket data for server using customer's exact details
+                const serverTicket = {
+                    ticketId: ticketId,
+                    title: userResponses.symptom,
+                    category: selectedCategory,
+                    profession: userResponses.profession,
+                    priority: priority,
+                    description: userResponses.symptom,
+                    troubleshootingSteps: userResponses.attempts,
+                    workImpact: userResponses.workImpact,
+                    timeframe: userResponses.timeframe,
+                    status: 'Open',
+                    verified: true,
+                    createdAt: new Date()
+                };
+                
+                // Send to server/MongoDB
+                fetch('/api/tickets', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(serverTicket)
+                }).then(response => {
+                    if (response.ok) {
+                        console.log('✅ Chatbot ticket saved to MongoDB');
+                    } else {
+                        console.log('❌ Failed to save chatbot ticket to MongoDB');
+                    }
+                }).catch(error => {
+                    console.log('❌ Error saving chatbot ticket:', error);
+                });
+                
+                // Also add to frontend display
+                const ticket = {
+                    id: ticketId,
+                    issue: userResponses.symptom.substring(0, 30) + '...',
+                    profession: userResponses.profession,
+                    priority: priority,
+                    timestamp: new Date().toLocaleString(),
+                    verified: true,
+                    details: userResponses
+                };
+                tickets.push(ticket);
+                updateTicketsList();
+                
+                const solveTime = priority === 'High' ? '1 hour' : '4 hours';
+                addMessage(`✅ Verified ticket created: ${ticketId}. Priority: ${priority} - Should be solved in ${solveTime}.`);
+                
+                verificationStep = 0;
+                userResponses = {};
+                attempts = 0;
+                return;
+            }
+            
+            if (text.includes('create ticket now')) {
+                verificationStep = 1;
+                addMessage('Before creating a ticket, I need to verify this is a genuine issue. What specific error message or symptom are you seeing?');
+                return;
+            }
+            
+            if (text.includes('create ticket') || text.includes('yes')) {
+                addMessage('Please describe your issue in detail first, then I can help create a proper ticket.');
+                return;
+            }
+            
+            if (text.includes('this solved it')) {
+                addMessage('Great! I\'m glad the issue is resolved. Anything else I can help with?');
+                resolvedIssues++;
+                attempts = 0;
+                return;
+            }
+            
+            if (text.includes('solved') || text.includes('worked')) {
+                addMessage('Great! I\'m glad the issue is resolved. Anything else I can help with?');
+                attempts = 0;
+                return;
+            }
+            
+            attempts = 0;
+            currentIssue = input;
+            
+            if (selectedCategory === 'Hardware') {
+                if (text.includes('not working') || text.includes('broken')) {
+                    addMessageWithButtons('For hardware issues: Check all cable connections, restart the device, and ensure power supply is working.', 
+                        ['This solved it!', 'Still not working', 'Need more help']);
+                } else {
+                    addMessageWithButtons('Hardware troubleshooting: Check connections, power supply, and device status indicators.', 
+                        ['This solved it!', 'Still not working', 'Need more help']);
+                }
+            } else if (selectedCategory === 'Software') {
+                addMessageWithButtons('For software issues: Restart the application, check for updates, and clear cache/temporary files.', 
+                    ['This solved it!', 'Still not working', 'Need more help']);
+            } else if (selectedCategory === 'Network') {
+                addMessageWithButtons('Most connection issues are resolved with a router restart. Try this first.', 
+                    ['This solved it!', 'Still not working', 'Create ticket now', 'Need more help']);
+            } else if (selectedCategory === 'Login') {
+                addMessageWithButtons('For login issues: Check your username/password, ensure Caps Lock is off, and clear browser cache.', 
+                    ['This solved it!', 'Still not working', 'Need more help']);
+            } else if (selectedCategory === 'Performance') {
+                addMessageWithButtons('For performance issues: Close unnecessary programs, restart your computer, and check available disk space.', 
+                    ['This solved it!', 'Still not working', 'Need more help']);
+            } else {
+                if (text.includes('slow') || text.includes('performance')) {
+                    addMessageWithButtons('For slow performance: Close unnecessary programs, restart your computer, and check available disk space.', 
+                        ['This solved it!', 'Still not working', 'Need more help']);
+                } else if (text.includes('wifi') || text.includes('internet') || text.includes('network')) {
+                    addMessageWithButtons('Most connection issues are resolved with a router restart. Try this first.', 
+                        ['This solved it!', 'Still not working', 'Create ticket now', 'Need more help']);
+                } else if (text.includes('login') || text.includes('password')) {
+                    addMessageWithButtons('For login issues: Check your username/password, ensure Caps Lock is off, and clear browser cache.', 
+                        ['This solved it!', 'Still not working', 'Need more help']);
+                } else if (text.includes('crash') || text.includes('freeze')) {
+                    addMessageWithButtons('For crashes: End the task in Task Manager, restart the application, and check for updates.', 
+                        ['This solved it!', 'Still not working', 'Need more help']);
+                } else {
+                    addMessage('I can help with computer issues. Please describe your specific problem (e.g., "computer is slow", "wifi not working").');
+                }
+            }
+        }
+        
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            addMessage(text, true);
+            input.value = '';
+            
+            setTimeout(() => getResponse(text), 500);
+        }
+        
+        function sendPredefined(text) {
+            addMessage(text, true);
+            setTimeout(() => getResponse(text), 500);
+        }
+        
+        function selectCategory(category) {
+            const input = document.getElementById('messageInput');
+            selectedCategory = category;
+            
+            if (category) {
+                const placeholders = {
+                    'Hardware': 'Describe your hardware issue...',
+                    'Software': 'Describe your software issue...',
+                    'Network': 'Describe your network issue...',
+                    'Login': 'Describe your login issue...',
+                    'Performance': 'Describe your performance issue...',
+                    'Other': 'Describe your issue...'
+                };
+                input.placeholder = placeholders[category] || 'Describe your issue...';
+                addMessage(`📂 Category selected: ${category}. Please describe your ${category.toLowerCase()} issue.`);
+            } else {
+                input.placeholder = 'Type your issue here...';
+            }
+        }
+        
+        function getEstimatedTime(priority) {
+            const times = {
+                'Critical': '0.5 hours',
+                'High': '1 hour', 
+                'Medium': '4 hours',
+                'Low': '24 hours'
+            };
+            return times[priority] || '24 hours';
+        }
+        
+        function getSolveMessage(priority) {
+            const hours = {
+                'Critical': '0.5',
+                'High': '1', 
+                'Medium': '4',
+                'Low': '24'
+            };
+            return `Should be solved in ${hours[priority] || '24'} hours`;
+        }
+        
+        function updateTicketsList() {
+            const ticketsList = document.getElementById('ticketsList');
+            const panelTicketsList = document.getElementById('panelTicketsList');
+            
+            const professionOrder = { 'Doctor': 1, 'Engineer': 2, 'Manager': 3, 'Teacher': 4, 'Accountant': 5, 'HR': 6, 'Sales': 7, 'Developer': 8, 'Student': 9, 'Other': 10 };
+            const priorityOrder = { 'Critical': 1, 'High': 2, 'Medium': 3, 'Low': 4 };
+            
+            const sortedTickets = tickets.sort((a, b) => {
+                const profA = professionOrder[a.profession] || 10;
+                const profB = professionOrder[b.profession] || 10;
+                
+                // First sort by profession
+                if (profA !== profB) {
+                    return profA - profB;
+                }
+                
+                // Then sort by priority within same profession
+                return priorityOrder[a.priority] - priorityOrder[b.priority];
+            });
+            
+            const ticketsHtml = sortedTickets.length === 0 ? 
+                '<p style="color: #6b7280; font-size: 14px;">No tickets yet</p>' :
+                sortedTickets.map(ticket => `
+                    <div class="ticket-item">
+                        <div class="ticket-id">${ticket.id}</div>
+                        <div class="ticket-issue">${ticket.issue}</div>
+                        <div style="font-size: 11px; color: #6366f1; font-weight: 500;">👥 ${ticket.profession || 'N/A'}</div>
+                        <div class="ticket-priority">${ticket.priority}</div>
+                        <div style="font-size: 10px; color: #059669; margin-top: 2px;">⏱️ ${getSolveMessage(ticket.priority)}</div>
+                    </div>
+                `).join('');
+            
+            ticketsList.innerHTML = ticketsHtml;
+            panelTicketsList.innerHTML = ticketsHtml;
+        }
+        
+        function toggleTicketsPanel() {
+            const panel = document.getElementById('ticketsPanel');
+            panel.classList.toggle('open');
+            updateTicketsList(); // Refresh tickets when panel opens
+        }
+        
+        function toggleAnalyticsPanel() {
+            const panel = document.getElementById('analyticsPanel');
+            panel.classList.toggle('open');
+            updateAnalytics();
+        }
+        
+        function updateAnalytics() {
+            document.getElementById('totalTickets').textContent = tickets.length;
+            document.getElementById('resolvedIssues').textContent = resolvedIssues;
+        }
+        
+        function createQuickTicket() {
+            document.getElementById('ticketModal').classList.add('show');
+        }
+        
+        function closeTicketModal() {
+            document.getElementById('ticketModal').classList.remove('show');
+        }
+        
+        function detectPriority(title, description) {
+            const text = (title + ' ' + description).toLowerCase();
+            
+            if (text.includes('urgent') || text.includes('critical') || text.includes('emergency') || text.includes('down') || text.includes('crashed')) {
+                return 'Critical';
+            }
+            if (text.includes('important') || text.includes('asap') || text.includes('deadline') || text.includes('business') || text.includes('not working')) {
+                return 'High';
+            }
+            if (text.includes('slow') || text.includes('issue') || text.includes('problem') || text.includes('error')) {
+                return 'Medium';
+            }
+            return 'Low';
+        }
+        
+        async function submitTicket(event) {
+            event.preventDefault();
+            
+            const title = document.getElementById('ticketTitle').value;
+            const category = document.getElementById('ticketCategory').value;
+            const profession = document.getElementById('ticketProfession').value;
+            const description = document.getElementById('ticketDescription').value;
+            const steps = document.getElementById('ticketSteps').value;
+            const impact = document.getElementById('ticketImpact').value;
+            
+            // Validate genuine issue
+            if (description.length < 20 || steps.length < 10) {
+                alert('Please provide more detailed information about your issue and troubleshooting attempts.');
+                return;
+            }
+            
+            // Priority based on profession and impact
+            let priority = impact === 'Cannot work' ? 'Critical' : 
+                          impact === 'Severely limited' ? 'High' : 
+                          impact === 'Some difficulty' ? 'Medium' : 'Low';
+            
+            // Boost priority for critical professions
+            if (['Doctor', 'Engineer', 'Manager'].includes(profession) && priority === 'Medium') {
+                priority = 'High';
+            }
+            
+            const ticketId = 'AIVA-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+            const ticket = {
+                ticketId: ticketId,
+                title: title,
+                category: category,
+                profession: profession,
+                priority: priority,
+                description: description,
+                troubleshootingSteps: steps,
+                workImpact: impact,
+                status: 'Open',
+                verified: true,
+                createdAt: new Date()
+            };
+            
+            try {
+                const response = await fetch('/api/tickets', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(ticket)
+                });
+                
+                if (response.ok) {
+                    tickets.push({
+                        id: ticketId,
+                        issue: title,
+                        category: category,
+                        profession: profession,
+                        priority: priority,
+                        description: description,
+                        timestamp: new Date().toLocaleString()
+                    });
+                    updateTicketsList();
+                    
+                    const solveTime = priority === 'Critical' ? '0.5 hours' : priority === 'High' ? '1 hour' : priority === 'Medium' ? '4 hours' : '24 hours';
+                    addMessage(`🎫 Support ticket created: ${ticketId}. Category: ${category}, Priority: ${priority}. Should be solved in ${solveTime}.`);
+                } else {
+                    addMessage(`❌ Error creating ticket. Please try again.`);
+                }
+            } catch (error) {
+                addMessage(`❌ Error creating ticket: ${error.message}`);
+            }
+            
+            closeTicketModal();
+            
+            document.getElementById('ticketTitle').value = '';
+            document.getElementById('ticketCategory').value = '';
+            document.getElementById('ticketProfession').value = '';
+            document.getElementById('ticketPriority').value = 'Medium';
+            document.getElementById('ticketDescription').value = '';
+            document.getElementById('ticketSteps').value = '';
+            document.getElementById('ticketImpact').value = '';
+        }
+        
+        // Get user email from URL or localStorage
+        function getUserEmail() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const email = urlParams.get('email') || localStorage.getItem('userEmail') || 'user@example.com';
+            return email;
+        }
+        
+        // Set user email on page load
+        window.onload = function() {
+            const email = getUserEmail();
+            document.getElementById('userEmail').textContent = `Welcome back, ${email}`;
+        };
+        
+        function logout() {
+            localStorage.removeItem('userEmail');
+            window.location.href = '/';
+        }
+        
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+            
+            body.classList.toggle('dark');
+            themeToggle.textContent = body.classList.contains('dark') ? '☀️' : '🌙';
+        }
+    </script>
+</body>
+</html>

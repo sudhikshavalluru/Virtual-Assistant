@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ticket System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 600px; }
+        input, textarea, select { width: 100%; padding: 10px; margin: 10px 0; }
+        button { background: #007cba; color: white; padding: 12px 20px; border: none; cursor: pointer; }
+        .ticket { border: 1px solid #ddd; padding: 15px; margin: 10px 0; }
+        .status { padding: 5px 10px; border-radius: 3px; color: white; }
+        .open { background: #28a745; }
+        .closed { background: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Ticket System</h1>
+        
+        <h2>Create New Ticket</h2>
+        <form id="ticketForm">
+            <input type="text" id="title" placeholder="Ticket Title" required>
+            <textarea id="description" placeholder="Description" rows="4" required></textarea>
+            <select id="priority">
+                <option value="low">Low Priority</option>
+                <option value="medium" selected>Medium Priority</option>
+                <option value="high">High Priority</option>
+            </select>
+            <button type="submit">Submit Ticket</button>
+        </form>
+
+        <h2>All Tickets</h2>
+        <button onclick="loadTickets()">Refresh Tickets</button>
+        <div id="ticketsList"></div>
+    </div>
+
+    <script>
+        // Submit new ticket
+        document.getElementById('ticketForm').onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const ticket = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                priority: document.getElementById('priority').value
+            };
+            
+            try {
+                const response = await fetch('/api/tickets', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(ticket)
+                });
+                
+                if (response.ok) {
+                    alert('Ticket created successfully!');
+                    document.getElementById('ticketForm').reset();
+                    loadTickets();
+                } else {
+                    alert('Error creating ticket');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        };
+
+        // Load and display tickets
+        async function loadTickets() {
+            try {
+                const response = await fetch('/api/tickets');
+                const tickets = await response.json();
+                
+                const ticketsList = document.getElementById('ticketsList');
+                ticketsList.innerHTML = '';
+                
+                tickets.forEach(ticket => {
+                    const ticketDiv = document.createElement('div');
+                    ticketDiv.className = 'ticket';
+                    ticketDiv.innerHTML = `
+                        <h3>${ticket.title}</h3>
+                        <p>${ticket.description}</p>
+                        <span class="status ${ticket.status}">${ticket.status.toUpperCase()}</span>
+                        <span style="margin-left: 10px;">Priority: ${ticket.priority}</span>
+                        <p><small>Created: ${new Date(ticket.createdAt).toLocaleString()}</small></p>
+                    `;
+                    ticketsList.appendChild(ticketDiv);
+                });
+            } catch (error) {
+                console.error('Error loading tickets:', error);
+            }
+        }
+
+        // Load tickets when page loads
+        window.onload = loadTickets;
+    </script>
+</body>
+</html>
